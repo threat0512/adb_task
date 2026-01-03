@@ -23,6 +23,11 @@ class TodoListView(APIView):
     def post(self, request):
         # Implement this method - accept a todo item in a mongo collection, persist it using db instance above.
         todo = { "todo": request.data.get("todo") }
-        todos.insert_one(todo)
-        return Response(True, status=status.HTTP_200_OK, content_type='application/json')
+
+        if todos.find_one(todo):
+            return Response({"error": "Todo already exists"}, status=status.HTTP_400_BAD_REQUEST, content_type='application/json')
+        else:
+            todos.insert_one(todo)
+            return Response(True, status=status.HTTP_200_OK, content_type='application/json')
+        
 
