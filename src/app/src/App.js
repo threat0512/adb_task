@@ -5,12 +5,14 @@ export function App() {
   const [todos, setTodos] = useState([]);
   const [todoInput, setTodoInput] = useState('');
   
+  // api url for the todos
   const API_URL = 'http://localhost:8000/todos/';
 
   useEffect(() => {
     fetchTodos();
   }, []);
 
+  // function to fetch the todos from the db
   const fetchTodos = async () => {
     try {
       const response = await fetch(API_URL);
@@ -21,6 +23,7 @@ export function App() {
     }
   };
 
+  // function to handle the form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -31,6 +34,7 @@ export function App() {
     }
     
     try {
+      // send the todo to the db
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -39,16 +43,20 @@ export function App() {
         body: JSON.stringify({ todo: trimmedInput }),
       });
       
+      // get the response from the db
       const data = await res.json();
       
+      // if the response is not ok, show the error
       if (!res.ok) {
         alert(data.error || 'Failed to create todo');
         return;
       }
       
+      // clear the input and fetch the todos
       setTodoInput('');
       fetchTodos();
     } catch (err) {
+      // error while creating todo
       alert('Failed to create todo');
       console.error('Error creating todo:', err);
     }
