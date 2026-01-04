@@ -4,32 +4,54 @@ import { useState, useEffect } from 'react';
 export function App() {
   const [todos, setTodos] = useState([]);
   const [todoInput, setTodoInput] = useState('');
+  
   const API_URL = 'http://localhost:8000/todos/';
+
   useEffect(() => {
     fetchTodos();
   }, []);
 
   const fetchTodos = async () => {
-    const response = await fetch(API_URL);
-    const data = await response.json();
-    setTodos(data);
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+      setTodos(data);
+    } catch (err) {
+      console.error('Error fetching todos:', err);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ todo: todoInput }),
-    });
-    if (res.status === 400) {
-      alert('Todo already exists');
+    const trimmedInput = todoInput.trim();
+    if (!trimmedInput) {
+      alert('Todo cannot be empty');
+      return;
     }
-    setTodoInput('');
-    fetchTodos();
+    
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ todo: trimmedInput }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert(data.error || 'Failed to create todo');
+        return;
+      }
+      
+      setTodoInput('');
+      fetchTodos();
+    } catch (err) {
+      alert('Failed to create todo');
+      console.error('Error creating todo:', err);
+    }
   };
 
   return (

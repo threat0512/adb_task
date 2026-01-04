@@ -1,33 +1,51 @@
-from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-import json, logging, os
-from pymongo import MongoClient
+import logging
 
-mongo_uri = 'mongodb://' + os.environ["MONGO_HOST"] + ':' + os.environ["MONGO_PORT"]
-db = MongoClient(mongo_uri)['test_db']
-todos = db['todos']
+from .todo_service import TodoService
+from .database import todos_collection
+
+logger = logging.getLogger(__name__)
 
   
 class TodoListView(APIView):
 
+    def __init__(self):
+        self.service = TodoService(todos_collection)
+
     def get(self, request):
-        # Implement this method - return all todo items from db instance above.
-        res = []
-        for todo in todos.find():
-            dict_todo = {"todo": todo["todo"]}
-            res.append(dict_todo)
-        return Response(res, status=status.HTTP_200_OK, content_type='application/json')
+        try:
+            todos = self.service.get_all_todos()
+            return Response(todos, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error getting todos {e}")
+            return Response(
+                {"error": "Something went wrong"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
     def post(self, request):
-        # Implement this method - accept a todo item in a mongo collection, persist it using db instance above.
-        todo = { "todo": request.data.get("todo") }
-
-        if todos.find_one(todo):
-            return Response({"error": "Todo already exists"}, status=status.HTTP_400_BAD_REQUEST, content_type='application/json')
-        else:
-            todos.insert_one(todo)
-            return Response(True, status=status.HTTP_200_OK, content_type='application/json')
-        
+        try:
+            todo_text = request.data.get("todo")
+            
+            validated_text = self.service.validate_todo_text(todo_text)
+            
+            created_todo = self.service.create_todo(validated_text)
+            
+            return Response(created_todo, status=status.HTTP_201_CREATED)
+            
+        except ValueError as e:
+            logger.warning(f"Validation error {e}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Error in POST todo {e}")
+            return Response(
+                {"error": "Failed to create todo"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
